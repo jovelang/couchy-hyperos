@@ -1,0 +1,37 @@
+name: 设备适配 / Device support
+description: 提交型号、固件和脱敏的实际验证结果
+body:
+  - type: markdown
+    attributes:
+      value: 请先阅读 docs/HYPEROS4.md。不要提交 IP、MAC、序列号、SSID、连接码、令牌或未脱敏的截图。
+  - type: input
+    id: model
+    attributes:
+      label: 电视型号和 Android 版本
+    validations:
+      required: true
+  - type: input
+    id: firmware
+    attributes:
+      label: 完整固件版本 / ROM
+    validations:
+      required: true
+  - type: input
+    id: version
+    attributes:
+      label: 本项目版本 / commit
+    validations:
+      required: true
+  - type: textarea
+    id: results
+    attributes:
+      label: 已验证 / 失败 / 未验证
+      description: 分别记录 HOME、中转、重启、播放中屏保、熄屏恢复、信号源与网页。请说明真实屏幕表现，不只记录命令成功。
+    validations:
+      required: true
+  - type: textarea
+    id: reproduction
+    attributes:
+      label: 复现步骤和脱敏错误信息
+    validations:
+      required: true

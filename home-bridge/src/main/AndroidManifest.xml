@@ -1,0 +1,37 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Modified from fandejin/homekey-standin (MIT), 2026-11-23. -->
+<!-- HOME-only shim deliberately has no app-drawer entry. -->
+<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools" tools:ignore="MissingLeanbackLauncher">
+    <uses-feature android:name="android.software.leanback" android:required="true" />
+    <uses-feature android:name="android.hardware.touchscreen" android:required="false" />
+    <!-- Development permission: optional adb grant by the device owner, never assumed. -->
+    <uses-permission android:name="android.permission.WRITE_SECURE_SETTINGS" tools:ignore="ProtectedPermissions" />
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_SPECIAL_USE" />
+    <permission android:name="com.ts.launcher.permission.CONTROL_ADB_KEEPER" android:protectionLevel="signature" />
+    <queries>
+        <package android:name="${launcherPackage}" />
+        <package android:name="com.conreo.couchytv" />
+    </queries>
+    <application android:label="Couchy HOME Bridge" android:allowBackup="false">
+        <activity android:name=".MainActivity" android:exported="true"
+            android:theme="@android:style/Theme.Translucent.NoTitleBar.Fullscreen"
+            android:launchMode="singleTask" android:excludeFromRecents="true"
+            android:stateNotNeeded="true" android:clearTaskOnLaunch="true"
+            android:screenOrientation="landscape"
+            android:configChanges="keyboard|keyboardHidden|navigation|orientation|screenSize|screenLayout|uiMode">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.HOME" />
+                <category android:name="android.intent.category.DEFAULT" />
+            </intent-filter>
+        </activity>
+        <service android:name=".AdbKeeperService" android:exported="true"
+            android:permission="com.ts.launcher.permission.CONTROL_ADB_KEEPER"
+            android:foregroundServiceType="specialUse">
+            <property android:name="android.app.PROPERTY_SPECIAL_USE_FGS_SUBTYPE"
+                android:value="Maintain owner-enabled local ADB for TV administration; disabled by default" />
+        </service>
+    </application>
+</manifest>

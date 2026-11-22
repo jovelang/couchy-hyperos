@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Original geometric artwork for Couchy HyperOS; GPL-3.0-only. -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android" android:width="64dp" android:height="64dp" android:viewportWidth="64" android:viewportHeight="64">
+    <path android:fillColor="#D9F7F1" android:pathData="M16,16 L48,16 Q54,16 54,22 L54,38 L10,38 L10,22 Q10,16 16,16Z" />
+    <path android:fillColor="#5AC7B4" android:pathData="M8,30 Q4,30 4,34 L4,48 Q4,52 8,52 L56,52 Q60,52 60,48 L60,34 Q60,30 56,30 L50,30 L50,40 L14,40 L14,30Z" />
+    <path android:fillColor="#FFFFFF" android:pathData="M16,33 L30,33 L30,39 L16,39Z M34,33 L48,33 L48,39 L34,39Z M10,52 L17,52 L17,57 L10,57Z M47,52 L54,52 L54,57 L47,57Z" />
+</vector>

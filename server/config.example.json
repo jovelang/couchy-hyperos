@@ -1,0 +1,16 @@
+{
+  "adb_serial": "TV_ADB_SERIAL",
+  "launcher_package": "io.github.jovelang.couchy",
+  "listen_host": "127.0.0.1",
+  "listen_port": 8768,
+  "url": "http://tv-control.local:8768",
+  "lan_url": "http://tv-control.local:8768",
+  "allowed_hosts": ["localhost", "127.0.0.1", "tv-control.local"],
+  "ha": {
+    "base_url": "http://homeassistant.local:8123",
+    "token_file": "~/.config/couchy-remote/ha-token",
+    "state_entity": "media_player.living_room_tv",
+    "power_on": [{"domain": "button", "service": "press", "entity_id": "button.living_room_tv_power_on"}],
+    "power_off": [{"domain": "media_player", "service": "turn_off", "entity_id": "media_player.living_room_tv"}]
+  }
+}

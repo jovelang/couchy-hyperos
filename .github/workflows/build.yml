@@ -1,0 +1,37 @@
+name: Build and audit
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  android:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+      - uses: gradle/actions/setup-gradle@v4
+      - name: Build both components and check release
+        run: ./gradlew :app:assembleDebug :home-bridge:assembleDebug :app:assembleRelease :app:lintRelease :home-bridge:lintRelease --no-daemon
+      - uses: actions/upload-artifact@v4
+        with:
+          name: couchy-hyperos-debug
+          path: |
+            app/build/outputs/apk/debug/app-debug.apk
+            home-bridge/build/outputs/apk/debug/home-bridge-debug.apk
+  companion:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - run: python -m pip install -r server/requirements-dev.txt
+      - run: ruff check server scripts && ruff format --check server scripts
+      - run: python -m unittest discover -s server/tests -v
+      - run: python scripts/check_public_tree.py

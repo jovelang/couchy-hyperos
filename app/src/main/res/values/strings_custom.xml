@@ -1,0 +1,16 @@
+<resources xmlns:tools="http://schemas.android.com/tools" tools:ignore="MissingTranslation">
+    <string name="input_av">AV (Composite)</string>
+    <string name="input_atv">Analog TV</string>
+    <string name="input_dtv">Digital TV</string>
+    <string name="input_sources">Input sources</string>
+    <string name="no_input_sources">No TV input sources available</string>
+    <string name="input_unavailable">This input cannot be opened on this TV</string>
+    <string name="show_lunar">Show lunar date</string>
+    <string name="show_lunar_sub">Chinese lunar month and day below the date</string>
+    <string name="uniform_system_icons">Unified app cards</string>
+    <string name="uniform_system_icons_sub">Unboxed brand marks, original wordmarks and brand colors across the entire card</string>
+    <string name="keep_adb">Keep ADB enabled</string>
+    <string name="keep_adb_sub">Maintain ADB while the TV is running; deep sleep still disconnects the network</string>
+    <string name="remote_keys_service">Couchy remote buttons</string>
+    <string name="remote_keys_description">Configure tap and hold for Menu and Input. Does not read screen content.</string>
+</resources>

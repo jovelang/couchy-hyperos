@@ -1,0 +1,37 @@
+# Local builds and IDE state
+.gradle/
+.kotlin/
+**/build/
+.idea/
+*.iml
+local.properties
+.DS_Store
+__pycache__/
+*.py[cod]
+.venv/
+.pytest_cache/
+.ruff_cache/
+
+# Runtime and per-device information never belong in the public repository.
+.local/
+/server/data/
+/server/logs/
+**/config.json
+.env
+.env.*
+!.env.example
+*.log
+*.apk
+*.aab
+*.idsig
+*.jks
+*.keystore
+*.p12
+*.pfx
+*token*.txt
+*token*.json
+*secret*.json
+*credentials*.json
+**/signing/
+captures/
+artifacts/

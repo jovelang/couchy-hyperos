@@ -1,0 +1,16 @@
+<resources>
+    <string name="input_av">AV 复合视频</string>
+    <string name="input_atv">ATV 模拟电视</string>
+    <string name="input_dtv">DTV 数字电视</string>
+    <string name="input_sources">信号源</string>
+    <string name="no_input_sources">未找到可用的电视信号源</string>
+    <string name="input_unavailable">此电视暂时无法打开该信号源</string>
+    <string name="show_lunar">显示农历</string>
+    <string name="show_lunar_sub">在日期下方显示农历月份和日期</string>
+    <string name="uniform_system_icons">统一应用卡片</string>
+    <string name="uniform_system_icons_sub">以独立品牌图形、原生字标与品牌配色设计整张卡片</string>
+    <string name="keep_adb">自动保持 ADB 开启</string>
+    <string name="keep_adb_sub">电视运行时维持连接；深度待机断网时仍无法连接</string>
+    <string name="remote_keys_service">Couchy 遥控器按键</string>
+    <string name="remote_keys_description">设置菜单键和信号源键的点按、长按功能；不读取屏幕内容。</string>
+</resources>

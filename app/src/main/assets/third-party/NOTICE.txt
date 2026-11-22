@@ -1,0 +1,32 @@
+Couchy HyperOS — unofficial derivative
+
+Desktop upstream: conreo/couchy-launcher
+https://github.com/conreo/couchy-launcher
+Copyright (C) 2026 the Couchy Launcher contributors
+GNU General Public License version 3; see LICENSE.
+
+Modifications: Copyright (C) 2026 Couchy HyperOS contributors.
+Modified distribution prepared 2026-11-23. See UPSTREAM.md and CHANGELOG.md.
+No warranty. No upstream or manufacturer endorsement is claimed.
+
+Independent HOME bridge: fandejin/homekey-standin
+https://github.com/fandejin/homekey-standin
+Copyright (c) 2026 fandejin; MIT License, see home-bridge/LICENSE.
+
+Android 14 DisplayControl initialization in DisplayGuard.java follows
+Genymobile/scrcpy's DisplayControl wrapper.
+https://github.com/Genymobile/scrcpy
+Copyright (C) 2018 Genymobile
+Copyright (C) 2018-2026 Romain Vimont
+Apache License 2.0; see licenses/Apache-2.0.txt.
+Display guard protocol, recovery and launcher integration are modifications.
+
+Apple public root certificate: https://www.apple.com/certificateauthority/
+SHA-256: B0B1730ECBC7FF4505142C49F1295E6EDA6BCAED7E2C68C5BE91B5A11001F024
+Additional certificate trust is scoped to sylvan.apple.com. No private key.
+Apple / Amazon / community media catalogs contain URLs only. The original
+media and trademarks are not licensed under this repository's GPL.
+Online Apple still-image catalog source: macOS DesktopPicture MobileAsset.
+No proprietary wallpaper media or fonts are bundled in this public tree.
+
+See LICENSING.md for dependency and content boundaries.
