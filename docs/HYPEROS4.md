@@ -11,6 +11,7 @@
 | 需求 | 实现 | 不支持时的处理 |
 | --- | --- | --- |
 | HOME 到自定义桌面 | 优先标准 HOME；固件接管时使用可选 `com.ts.launcher` 前台中转 | 保留原 HOME，提供手动启动和恢复 |
+| 系统桌面更新后保持 HOME | 所有者明确启用的电视端持久优先规则；开机/中转更新后检查 | 默认关闭；私有能力不可用时只保留普通 HOME，不停用系统桌面 |
 | 系统设置 / 信号源 | 标准 intent + 小米入口；SourceController 读取电视输入信息 | 回退系统设置，不伪造实时预览 |
 | 其他应用中遥控键映射 | 用户启用 AccessibilityService 后处理限定按键 | 只在桌面中生效，不自动开启辅助服务 |
 | ADB 开关维护 | 可选中转前台服务，需所有者通过 ADB 授权 WRITE_SECURE_SETTINGS | 默认关闭；不阻止深睡 |
@@ -24,6 +25,39 @@
 部分小米固件对默认 HOME 的处理不同于标准 Android：设置默认成功后，实体 HOME 仍可能回到系统桌面。本项目采用 `fandejin/homekey-standin` 的已公开方案，在指定身份的透明前台 Activity 内转发，等待用户解锁，最多重试 30 秒，目标不可用时进入设置。
 
 中转只有 HOME intent-filter，不出现在应用抽屉。它不是后台强行启动桌面，不能改成常驻服务无限拉起前台。`com.ts.launcher` 是兼容性约束，不是私人设备地址，也不表示厂商背书。若固件不再识别它，应记录行为并增加能力分支，不能假定永远有效。
+
+### 电视端持久 HOME（可选）
+
+已观察到：小米应用商店更新 `com.mitv.tvhome` 后，曾停用的系统桌面重新启用，常规 HOME 默认项失效，最终出现系统桌面或选择器。仅设置普通 HOME、停用系统桌面，或定时依赖电脑修复，均不能满足电视独立运行的要求。新方案保留系统桌面启用，单独保存持久规则。
+
+实现分为四步：
+
+1. 所有者经已授权 ADB 调用受 DUMP 保护的 `content://com.ts.launcher.homepolicy`，明确启用。开关保存在 device-protected 私有存储，默认关闭；不是桌面应用可随意调用的接口。
+2. `HomePolicy` 探测可选小米库的 `mitv.impl.util.TvStateGc`、`mTvService` 和 `mitv.internal.ITvService.runSystemCommand`。只执行已安装中转 APK 中固定的 `HomePolicyCommand install/remove`，不接收调用方命令、包名或脚本。
+3. 帮助程序检查实际 UID 必须为 1000，再调用 `IPackageManager.addPersistentPreferredActivity`，为用户 0 的 MAIN/HOME/DEFAULT 指定固定中转组件。先清理的也只是中转自身的持久记录，避免反复开机累积。系统将规则写入持久存储；普通默认项或候选集合变化不再是唯一依据。原理参考 [Android 14 PackageManager 实现](https://android.googlesource.com/platform/frameworks/base/+/android-14.0.0_r1/services/core/java/com/android/server/pm/PreferredActivityHelper.java)。本项目调用该能力，没有复制 AOSP 代码。
+4. `HomeBootReceiver` 仅在锁定启动、启动完成、用户解锁和中转自身替换事件后检查；HOME Activity 可在 Direct Boot 阶段接收 HOME，等待解锁后转发。没有新增轮询服务，也不后台强拉 Activity。关闭策略后，排队的启动检查会再次检查开关，避免重新安装规则。
+
+适配前提：
+
+- 当前帮助程序针对 Android 14 的隐藏接口签名及用户 0；其他 API、多用户、儿童模式尚未验证。桌面基础 minSdk 26 不等于持久 HOME 支持 Android 8。
+- 固件需提供上面的库和系统服务，且执行身份必须是真正 system UID。缺库、拒绝执行或接口变化时记录失败；不申请 root、不配置 Device Owner、不自动开启 ADB。已测型号没有 device-admin 能力，不依赖该路线。
+- `com.ts.launcher` 不能与另一同名应用共存。必须保留自己 APK 的签名，以便升级和恢复；桌面目标包由 `launcherApplicationId` 配置，两个组件和服务器应匹配。
+- 首次操作前记录可用的原 HOME，直接启动 Couchy 验证，并确认系统设置/ADB 恢复路径。不能将 ResolverActivity 当成原桌面保存。
+- 持久规则优先于普通默认项。切换到其他桌面、卸载中转或恢复系统桌面之前，先关闭策略并移除它；清数据、恢复出厂、卸载中转、固件主动重写持久策略仍可能让方案失效。
+
+管理端点仅接受 `status`、`enable`、`disable`；manifest 声明 DUMP，`call()` 内再次显式检查调用者权限。普通应用调用已在开发基线验证会抛出 SecurityException。ADB shell 已具有管理权限，不要额外把 DUMP 授予第三方应用。`lastCommandAccepted` 只表示系统服务接收了请求；必须检查实际 HOME、帮助程序成功日志及重启/更新回归。
+
+2026-11-23 开发基线验证（公开版目标应用 ID 尚待重测）：
+
+| 场景 | 结果和边界 |
+| --- | --- |
+| 系统桌面同签名、同版本覆盖安装，保留启用 | HOME 仍由中转打开 Couchy；不等于真实新版本或固件 OTA 测试 |
+| 清除普通 HOME 默认项；强制停止桌面/中转后按 HOME | 持久规则仍解析到中转，桌面可启动 |
+| 电脑临时守护停用、ADB 断开后完整重启 | 首次只读观察时前台已是 Couchy；日志记录启动检查和 system UID 1000 写入成功 |
+| 待机后唤醒 | 启动次数未增加，自动返回 Couchy；没有额外发送 HOME 或启动桌面命令 |
+| 关闭/重新启用规则、普通应用越权访问 | 移除/恢复规则可用；无权限调用被拒绝 |
+
+配置、恢复和无记录时的处理见 [安装与恢复](INSTALL.md)。未来系统 OTA 可能关闭厂商接口；若发生，保留系统桌面并回退普通 HOME，不承诺永久不受任何升级影响。
 
 ## 屏保和电源
 
@@ -46,7 +80,7 @@
 ## 新型号验收清单
 
 1. 记录型号、Android API、完整固件版本；记录标准 HOME 的解析与实体 HOME 行为。
-2. 直接启动新桌面，再验证中转、冷启动、正常重启、待机唤醒和原 HOME 恢复。
+2. 直接启动新桌面，再验证中转、冷启动、正常重启、待机唤醒和原 HOME 恢复。持久模式另测 system UID 日志、普通默认项重置、系统桌面覆盖安装、中转自身升级及禁用策略后的恢复；断开电脑守护后复验。
 3. 检查系统设置、Wi-Fi 名称、输入列表排序、信号源名称与返回行为；分别测试未连接和已通电 HDMI，描述是否真有画面。
 4. 关闭/开启桌面屏保，确认原系统屏保不会双重出现，关闭后能恢复原设置；播放视频/直播、HDMI 和投屏时不应被桌面计时抢走。
 5. 分别记录屏保、Awake+面板 Off、Asleep/Dozing；检查真实背光、按键恢复和退出异常时恢复。截图仍有图像不代表背光点亮。

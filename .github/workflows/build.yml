@@ -17,7 +17,7 @@ jobs:
           java-version: '17'
       - uses: gradle/actions/setup-gradle@v4
       - name: Build both components and check release
-        run: ./gradlew :app:assembleDebug :home-bridge:assembleDebug :app:assembleRelease :app:lintRelease :home-bridge:lintRelease --no-daemon
+        run: ./gradlew :app:assembleDebug :home-bridge:assembleDebug :app:assembleRelease :home-bridge:assembleRelease :app:lintRelease :home-bridge:lintRelease --no-daemon
       - uses: actions/upload-artifact@v4
         with:
           name: couchy-hyperos-debug
@@ -34,4 +34,5 @@ jobs:
       - run: python -m pip install -r server/requirements-dev.txt
       - run: ruff check server scripts && ruff format --check server scripts
       - run: python -m unittest discover -s server/tests -v
+      - run: python -m unittest discover -s scripts/tests -v
       - run: python scripts/check_public_tree.py

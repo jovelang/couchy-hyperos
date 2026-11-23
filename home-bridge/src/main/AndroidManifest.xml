@@ -7,6 +7,7 @@
     <uses-feature android:name="android.hardware.touchscreen" android:required="false" />
     <!-- Development permission: optional adb grant by the device owner, never assumed. -->
     <uses-permission android:name="android.permission.WRITE_SECURE_SETTINGS" tools:ignore="ProtectedPermissions" />
+    <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE_SPECIAL_USE" />
     <permission android:name="com.ts.launcher.permission.CONTROL_ADB_KEEPER" android:protectionLevel="signature" />
@@ -15,7 +16,23 @@
         <package android:name="com.conreo.couchytv" />
     </queries>
     <application android:label="Couchy HOME Bridge" android:allowBackup="false">
-        <activity android:name=".MainActivity" android:exported="true"
+        <!-- Optional OEM capability; no vendor library is redistributed. -->
+        <uses-library android:name="com.xiaomi.mitv.api" android:required="false" />
+        <uses-library android:name="mitvmiddlewareimpl" android:required="false" />
+        <provider android:name=".HomePolicyProvider"
+            android:authorities="com.ts.launcher.homepolicy"
+            android:exported="true" android:directBootAware="true"
+            android:permission="android.permission.DUMP" />
+        <receiver android:name=".HomeBootReceiver" android:exported="true"
+            android:directBootAware="true">
+            <intent-filter>
+                <action android:name="android.intent.action.LOCKED_BOOT_COMPLETED" />
+                <action android:name="android.intent.action.BOOT_COMPLETED" />
+                <action android:name="android.intent.action.USER_UNLOCKED" />
+                <action android:name="android.intent.action.MY_PACKAGE_REPLACED" />
+            </intent-filter>
+        </receiver>
+        <activity android:name=".MainActivity" android:exported="true" android:directBootAware="true"
             android:theme="@android:style/Theme.Translucent.NoTitleBar.Fullscreen"
             android:launchMode="singleTask" android:excludeFromRecents="true"
             android:stateNotNeeded="true" android:clearTaskOnLaunch="true"

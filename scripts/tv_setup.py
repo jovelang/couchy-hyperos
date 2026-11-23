@@ -9,11 +9,13 @@ import os
 import re
 import shlex
 import subprocess
+import time
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
 PACKAGE = "io.github.jovelang.couchy"
 BRIDGE = "com.ts.launcher/com.homekey.standin.MainActivity"
+POLICY_URI = "content://com.ts.launcher.homepolicy"
 COMPONENT = re.compile(r"[a-zA-Z][a-zA-Z0-9_.]*/[a-zA-Z0-9_.$]+")
 
 
@@ -65,6 +67,123 @@ class TV:
     def installed(self, package):
         return "package:" + package in self.shell("pm", "list", "packages", package).splitlines()
 
+    def policy(self, method):
+        result = self.shell("content", "call", "--uri", POLICY_URI, "--method", method)
+        if not re.search(r"\benabled=(?:true|false)\b", result):
+            raise RuntimeError("HOME policy endpoint unavailable; install the matching bridge")
+        return result
+
+    def wait_home(self, target):
+        target = expand_component(target)
+        for _ in range(15):
+            if expand_component(self.home()) == target:
+                return
+            time.sleep(1)
+        raise RuntimeError(
+            "HOME verification failed; keep the bridge installed and use the recovery guide"
+        )
+
+
+def expand_component(component):
+    if not component or not COMPONENT.fullmatch(component):
+        return None
+    package, activity = component.split("/", 1)
+    return package + "/" + (package + activity if activity.startswith(".") else activity)
+
+
+def restore(tv, state):
+    if state.get("serial") != tv.serial:
+        raise RuntimeError("Rollback record belongs to another device")
+    original = state.get("home")
+    stock = state.get("stock_package")
+    if not expand_component(original) or not re.fullmatch(r"[a-zA-Z][a-zA-Z0-9_.]+", stock or ""):
+        raise RuntimeError("Invalid rollback component/package")
+    # Old records predate this feature. If the endpoint exists, remove its policy
+    # even when persistent mode was enabled manually after the record was saved.
+    if tv.installed("com.ts.launcher"):
+        try:
+            status = tv.policy("status")
+        except RuntimeError:
+            if state.get("persistent_requested"):
+                raise RuntimeError(
+                    "Cannot remove the recorded persistent policy; keep the bridge installed"
+                ) from None
+        else:
+            if "enabled=true" in status or state.get("persistent_requested"):
+                result = tv.policy("disable")
+                if "lastCommandAccepted=true" not in result:
+                    raise RuntimeError("Policy removal was not accepted; keep the bridge installed")
+    elif state.get("persistent_requested"):
+        raise RuntimeError("Reinstall the same signed bridge to remove its persistent policy first")
+    if not state["stock_disabled"] and tv.installed(stock):
+        tv.shell("pm", "enable", "--user", "0", stock)
+    tv.shell("cmd", "package", "set-home-activity", "--user", "0", original)
+    # Removal is asynchronous: do not report recovery until original HOME wins.
+    tv.wait_home(original)
+    tv.shell("input", "keyevent", "KEYCODE_HOME")
+
+
+def activate(tv, state_path, launcher_package, use_bridge=False, persistent=False):
+    if persistent:
+        if not use_bridge:
+            raise ValueError("Persistent HOME requires --bridge")
+        if (
+            tv.shell("am", "get-current-user") != "0"
+            or tv.shell("getprop", "ro.build.version.sdk") != "34"
+        ):
+            raise RuntimeError("Persistent HOME is validated only for Android 14 user 0")
+        libraries = tv.shell("pm", "list", "libraries").splitlines()
+        if not {"library:com.xiaomi.mitv.api", "library:mitvmiddlewareimpl"}.issubset(libraries):
+            raise RuntimeError("Required Xiaomi libraries unavailable; leaving HOME unchanged")
+        tv.policy("status")
+    if not tv.installed(launcher_package):
+        raise RuntimeError("Install and open the launcher first")
+    target = BRIDGE if use_bridge else launcher_package + "/com.conreo.couchytv.MainActivity"
+    if use_bridge and not tv.installed("com.ts.launcher"):
+        raise RuntimeError("Install the matching HOME bridge first")
+    original = tv.home()
+    if not expand_component(original) or original.split("/", 1)[0] == "android":
+        raise RuntimeError("Original HOME is not a usable recovery target; select it first")
+    if expand_component(original) == expand_component(target) and not state_path.exists():
+        raise RuntimeError(
+            "Already using target HOME with no baseline; see manual recovery in docs/INSTALL.md"
+        )
+    if state_path.exists():
+        state = json.loads(state_path.read_text())
+        if state.get("serial") != tv.serial:
+            raise RuntimeError("Rollback record belongs to another device")
+    else:
+        disabled = tv.shell("pm", "list", "packages", "-d").splitlines()
+        state = {
+            "serial": tv.serial,
+            "home": original,
+            "stock_package": "com.mitv.tvhome",
+            "stock_disabled": "package:com.mitv.tvhome" in disabled,
+        }
+        state_path.parent.mkdir(mode=0o700, exist_ok=True)
+        descriptor = os.open(state_path, os.O_CREAT | os.O_EXCL | os.O_WRONLY, 0o600)
+        with os.fdopen(descriptor, "w") as handle:
+            json.dump(state, handle, indent=2)
+    tv.shell("am", "start", "-n", launcher_package + "/com.conreo.couchytv.MainActivity")
+    if persistent:
+        # Persist intent before the asynchronous system request, including failures.
+        state["persistent_requested"] = True
+        state_path.write_text(json.dumps(state, indent=2))
+        result = tv.policy("enable")
+        if "lastCommandAccepted=true" not in result:
+            raise RuntimeError(
+                "Native request declined; run restore before retrying; original HOME was not disabled"
+            )
+        # Keep the stock desktop available, including when migrating from the old
+        # disable-user approach. The saved original package state is not overwritten.
+        if tv.installed("com.mitv.tvhome"):
+            tv.shell("pm", "enable", "--user", "0", "com.mitv.tvhome")
+        # Do not create an ordinary HOME preference that could mask a failed
+        # persistent request during this check.
+    else:
+        tv.shell("cmd", "package", "set-home-activity", "--user", "0", target)
+    tv.wait_home(target)
+
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
@@ -72,10 +191,13 @@ def main():
     parser.add_argument("--launcher-package", default=PACKAGE)
     sub = parser.add_subparsers(dest="action", required=True)
     sub.add_parser("doctor")
-    activate = sub.add_parser("activate")
-    activate.add_argument("--bridge", action="store_true")
-    activate.add_argument("--disable-stock", action="store_true")
-    activate.add_argument("--stock-home-package", default="com.mitv.tvhome")
+    setup = sub.add_parser("activate")
+    setup.add_argument("--bridge", action="store_true")
+    setup.add_argument(
+        "--persistent",
+        action="store_true",
+        help="Opt into the Xiaomi TV-native policy (Android 14 user 0)",
+    )
     sub.add_parser("restore")
     args = parser.parse_args()
     if not re.fullmatch(r"[a-zA-Z][a-zA-Z0-9_.]{1,180}", args.launcher_package):
@@ -106,57 +228,14 @@ def main():
         if not state_path.exists():
             raise RuntimeError("No rollback record. See docs/INSTALL.md for manual recovery.")
         state = json.loads(state_path.read_text())
-        if state.get("serial") != args.serial:
-            raise RuntimeError("Rollback record belongs to another device")
-        original = state.get("home")
-        if not original or not COMPONENT.fullmatch(original):
-            raise RuntimeError("Original HOME is not a valid explicit component")
-        if not state["stock_disabled"] and tv.installed(state["stock_package"]):
-            tv.shell("pm", "enable", "--user", "0", state["stock_package"])
-        tv.shell("cmd", "package", "set-home-activity", original)
-        tv.shell("input", "keyevent", "KEYCODE_HOME")
+        restore(tv, state)
         print(
             "Restored original HOME. Confirm with the physical remote before uninstalling anything."
         )
         return
-    if args.stock_home_package != "com.mitv.tvhome":
-        parser.error(
-            "Only the known Xiaomi stock HOME may be disabled. Other vendors require a reviewed port."
-        )
-    if args.disable_stock and not args.bridge:
-        parser.error("Test the HOME bridge before considering stock HOME changes")
-    if args.disable_stock and not tv.installed(args.stock_home_package):
-        raise RuntimeError("The specified Xiaomi stock HOME is not installed")
-    if not tv.installed(args.launcher_package):
-        raise RuntimeError("Install and open the launcher first")
-    target = BRIDGE if args.bridge else args.launcher_package + "/com.conreo.couchytv.MainActivity"
-    if args.bridge and not tv.installed("com.ts.launcher"):
-        raise RuntimeError("Install the matching HOME bridge first")
-    original = tv.home()
-    if not original:
-        raise RuntimeError("Cannot record the original HOME; leaving settings untouched")
-    if original == target and not state_path.exists():
-        raise RuntimeError(
-            "Already using target HOME with no baseline. Restore the original HOME before recording a new baseline."
-        )
-    if not state_path.exists():
-        disabled = tv.shell("pm", "list", "packages", "-d").splitlines()
-        state = {
-            "serial": args.serial,
-            "home": original,
-            "stock_package": args.stock_home_package,
-            "stock_disabled": "package:" + args.stock_home_package in disabled,
-        }
-        state_path.parent.mkdir(mode=0o700, exist_ok=True)
-        descriptor = os.open(state_path, os.O_CREAT | os.O_EXCL | os.O_WRONLY, 0o600)
-        with os.fdopen(descriptor, "w") as handle:
-            json.dump(state, handle, indent=2)
-    tv.shell("am", "start", "-n", args.launcher_package + "/com.conreo.couchytv.MainActivity")
-    tv.shell("cmd", "package", "set-home-activity", target)
-    if args.disable_stock:
-        tv.shell("pm", "disable-user", "--user", "0", args.stock_home_package)
+    activate(tv, state_path, args.launcher_package, args.bridge, args.persistent)
     print(
-        "HOME setting applied; rollback record saved locally. Verify physical HOME, restart and wake, as described in docs/INSTALL.md."
+        "HOME resolves to the target; rollback record saved locally. A system request acknowledgement is not proof of persistence. Verify helper logs, physical HOME, restart and wake, as described in docs/INSTALL.md."
     )
 
 

@@ -22,6 +22,10 @@
 
 `home-bridge` 独立 APK 使用固件识别的 `com.ts.launcher` 身份。透明前台 Activity 等待解锁并转发；目标不存在时保留设置页回退。ADB 保持是单独的前台服务，只在权限已授予且用户启用时运行，不获取唤醒锁。
 
+可选持久策略路径：`DUMP 管理调用 → HomePolicy → 固件系统服务 → 固定 HomePolicyCommand → PackageManager 用户 0 持久 HOME`。`HomePolicyProvider.call()` 显式检查 DUMP，只开放状态/启用/关闭；APK 路径检查和固定操作避免调用方拼接系统命令。帮助程序要求真正 system UID，只修改中转包自身的持久优先项。原系统桌面无需停用。
+
+开关和请求结果保存在 device-protected 私有偏好，不含地址或凭据；默认关闭。`HomeBootReceiver` 只处理受系统保护的启动、解锁、自身替换事件，通过 `goAsync()` 在工作线程检查。显式启停与启动检查共用锁，关闭后不再排队重装。该路径不启动常驻守护或唤醒锁，与可选的 ADB 保持服务、外部网页服务器独立。系统服务接受请求和帮助程序执行成功是两个阶段，验收要结合实际 HOME、日志和断开电脑后的重启。入口、适配条件和移除顺序见 HYPEROS4.md / INSTALL.md。
+
 ## 可选服务器
 
 ```text

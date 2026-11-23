@@ -16,6 +16,7 @@
 - 可选渐变、图片、视频屏保，分别设置进入屏保、熄屏和待机的等待时间；屏保默认关闭。
 - 可选局域网网页：电视状态、前台应用、遥控、PNG 原图截图、桌面设置、系统设置入口、共享存储上传/下载、APK 安装。
 - 可选 Home Assistant / 米家开关机，电视休眠时由仍在运行的服务器接收指令。
+- 可选澎湃 OS 4 电视端持久 HOME：系统保存默认规则，开机/中转更新后检查，运行不依赖电脑、ADB 在线或后台轮询。
 
 ## 支持范围
 
@@ -23,16 +24,32 @@
 | --- | --- |
 | Android TV / Google TV，Android 8.0+（API 26） | 基础桌面目标环境；不同设备仍需验证 |
 | 小米电视澎湃 OS 4 / Android 14 | 专项适配；详见下方实测边界 |
-| 小米 MiTV-MTSU0 / interstellar，OS4.0.6.0.UTSMATV | 开发基线曾实测 HOME、中转、屏保、熄屏恢复、待机与局域网控制 |
+| 小米 MiTV-MTSU0 / interstellar，OS4.0.6.0.UTSMATV | 开发基线实测持久 HOME、重启、待机唤醒与系统桌面覆盖安装；另有屏保/局域网控制记录 |
 | 其他型号、其他澎湃版本 | 未确认；请按适配文档提交能力检测和测试结果 |
 
 公开版更换了应用 ID、移除了私人配置并将组件改为通用配置。构建检查与原开发基线的实机记录不能替代公开版在每个目标设备上的重新验证。**不承诺所有小米电视通用。** 无需 Google Play 服务；小米私有接口不可用时，基础桌面仍可使用。
+
+## 澎湃 OS 4：电视端默认桌面
+
+普通 `set-home-activity` 保存的是常规默认项，系统桌面更新、HOME 候选列表变化后可能失效。可选持久方案让固件已有的系统服务执行固定 HOME 帮助程序，以真正的 system UID 向 Android PackageManager 写入持久优先规则。HOME 先进入 `com.ts.launcher` 中转，解锁后打开 Couchy；系统桌面保留安装、启用和更新能力。
+
+这项能力**默认关闭**。当前适配条件是 **Android 14、用户 0**，固件提供 `com.xiaomi.mitv.api` / `mitvmiddlewareimpl`，并且固定帮助程序确实以 system UID 执行。首次配置及恢复需要设备已授权的 ADB；配置完成后，默认 HOME 与开机检查在电视本机完成，**无需 Mac、常开服务器、持续 ADB 连接或保持 ADB 开启**。网页远程控制仍是另一个可选功能，需要服务器。
+
+安装并验证桌面和中转、记录可恢复的原 HOME 后，明确启用：
+
+```sh
+python3 scripts/tv_setup.py --serial '<TV_ADB_SERIAL>' activate --bridge --persistent
+```
+
+恢复时执行 `python3 scripts/tv_setup.py --serial '<TV_ADB_SERIAL>' restore`。它先关闭自动重设并请求移除持久规则，再恢复原 HOME 并检查实际解析结果；不要先卸载中转。原记录丢失时，按 [手动恢复](docs/INSTALL.md#5-恢复) 操作。
+
+开发基线已验证：普通 HOME 默认项清除、系统桌面**同签名同版本覆盖安装**、强制停止后 HOME、断开电脑守护后的完整重启，以及待机唤醒。尚未验证未来系统 OTA 或所有新版本更新。系统服务返回“已接受”也不等于规则已写入；详细前提、日志确认和新设备验收见 [适配方案](docs/HYPEROS4.md#电视端持久-home可选)。
 
 ## 项目结构
 
 ```text
 app/                 Couchy 衍生桌面，Kotlin / Compose for TV
-home-bridge/         可选 HOME 中转与 ADB 保持组件，源自 homekey-standin（MIT）
+home-bridge/         可选 HOME 中转、电视端持久 HOME 与 ADB 保持，源自 homekey-standin（MIT）
 server/              可选 Python 局域网控制服务与网页
 scripts/             安装检查、恢复辅助和发布前检查
 docs/                架构、澎湃适配、安装、隐私和网页配置
@@ -49,7 +66,7 @@ licenses/            第三方许可文本
 git clone https://github.com/jovelang/couchy-hyperos.git
 cd couchy-hyperos
 ./gradlew :app:assembleDebug :home-bridge:assembleDebug
-./gradlew :app:assembleRelease :app:lintRelease :home-bridge:lintRelease
+./gradlew :app:assembleRelease :home-bridge:assembleRelease :app:lintRelease :home-bridge:lintRelease
 ```
 
 - 桌面调试包：`app/build/outputs/apk/debug/app-debug.apk`
@@ -78,7 +95,7 @@ python3 -m venv .venv
 
 ## 默认行为与数据
 
-昵称、天气城市、远程访问地址和连接码均为空；天气、桌面屏保、保持 ADB 与网络壁纸均不默认开启。初始背景为本地渐变。不自动获取用户定位、不包含家庭设备列表或账号。
+昵称、天气城市、远程访问地址和连接码均为空；天气、桌面屏保、持久 HOME、保持 ADB 与网络壁纸均不默认开启。初始背景为本地渐变。不自动获取用户定位、不包含家庭设备列表或账号。
 
 启用天气或在线壁纸后会访问对应第三方服务；局域网控制会处理截图、文件和配置。详见 [隐私与权限](docs/PRIVACY.md)。视频/图片的所有权与软件许可证不同：仓库不包含 Apple / Amazon 壁纸媒体、第三方 APK、私人截图、运行数据或签名文件。
 

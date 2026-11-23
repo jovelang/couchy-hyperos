@@ -12,6 +12,9 @@ No warranty. No upstream or manufacturer endorsement is claimed.
 Independent HOME bridge: fandejin/homekey-standin
 https://github.com/fandejin/homekey-standin
 Copyright (c) 2026 fandejin; MIT License, see home-bridge/LICENSE.
+TV-native persistent HOME policy, boot checks and restricted administration
+are modifications by Couchy HyperOS contributors, 2026-11-23 (MIT).
+Android PackageManager interfaces are referenced, not redistributed.
 
 Android 14 DisplayControl initialization in DisplayGuard.java follows
 Genymobile/scrcpy's DisplayControl wrapper.

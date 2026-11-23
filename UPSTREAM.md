@@ -5,7 +5,7 @@
 | 组件 | 原项目 | 使用依据 | 许可 |
 | --- | --- | --- | --- |
 | 桌面主体 | [conreo/couchy-launcher](https://github.com/conreo/couchy-launcher) | 导入基线 [d3dcd70d3dd3b261108d25d72569671aee23b2d6](https://github.com/conreo/couchy-launcher/tree/d3dcd70d3dd3b261108d25d72569671aee23b2d6) | GPL-3.0-only |
-| HOME 中转 | [fandejin/homekey-standin](https://github.com/fandejin/homekey-standin) | 基线 [f41ae8b11be0957156cbdf4147b2668e03bd1808](https://github.com/fandejin/homekey-standin/tree/f41ae8b11be0957156cbdf4147b2668e03bd1808) 的前台转发方案，增加解锁重试、目标配置与可选 ADB 保持 | MIT，见 home-bridge/LICENSE |
+| HOME 中转 | [fandejin/homekey-standin](https://github.com/fandejin/homekey-standin) | 基线 [f41ae8b11be0957156cbdf4147b2668e03bd1808](https://github.com/fandejin/homekey-standin/tree/f41ae8b11be0957156cbdf4147b2668e03bd1808) 的前台转发方案，增加解锁重试、目标配置、可选 ADB 保持及电视端持久 HOME | MIT，见 home-bridge/LICENSE |
 | Android 14 显示控制 | [Genymobile/scrcpy](https://github.com/Genymobile/scrcpy) | DisplayControl 初始化与 `android_servers` 加载方法；不是打包整个 scrcpy | Apache-2.0，保留来源和版权 |
 
 ## 本分支的主要改动
@@ -14,6 +14,7 @@
 
 - 重做顶栏、时钟、日期、农历、天气、问候、应用品牌卡片与设置组织。
 - 调整 HOME / 方向键行为、菜单循环、信号源列表和实时预览、按键映射。
+- 电视端持久 HOME、Direct Boot 和启动/中转升级检查、固定管理操作及恢复；保留系统桌面，不依赖电脑轮询。
 - 视频首帧与视频本地缓存、单渲染表面、后台恢复和切换状态，减少衔接黑闪。
 - 图片、视频与动态渐变屏保；小米系统闲置事件与屏保入口协调；显示控制恢复守护。
 - 可选局域网控制服务：本地认证、状态、遥控、截图、配置、文件与安装任务；Home Assistant / 米家适配。

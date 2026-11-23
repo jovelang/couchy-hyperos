@@ -9,8 +9,8 @@ android {
         applicationId = "com.ts.launcher"
         minSdk = 26
         targetSdk = 34
-        versionCode = 5
-        versionName = "0.1.0"
+        versionCode = 6
+        versionName = "0.1.1"
         val target = providers.gradleProperty("launcherApplicationId")
             .getOrElse("io.github.jovelang.couchy")
         require(target.matches(Regex("[a-zA-Z][a-zA-Z0-9_.]+")))
